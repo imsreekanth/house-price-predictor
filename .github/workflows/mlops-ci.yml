@@ -1,0 +1,26 @@
+name: ML Model Training CI
+on: [push]
+
+jobs:
+  train-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Train Model
+        run: python train.py
+
+      - name: Archive Model Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: house-price-model
+          path: models/house_model.joblib
