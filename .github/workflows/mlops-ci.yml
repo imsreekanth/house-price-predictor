@@ -2,7 +2,7 @@ name: ML Model Training CI
 on: [push]
 
 jobs:
-  train-and-test:
+  train-and-validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -14,13 +14,31 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install pandas scikit-learn joblib
 
       - name: Train Model
-        run: python train.py
+        run: python3 train.py
+
+      - name: Check Model Quality (Quality Gate)
+        run: |
+          # We use a Python one-liner to compare the score against our threshold
+          # If the Error (MAE) is > 50,000, we exit with code 1 to fail the build
+          python3 -c "
+          with open('model_score.txt', 'r') as f:
+              score = float(f.read())
+          threshold = 50000.0
+          print(f'Current Model Error: {score}')
+          if score > threshold:
+              print(f'❌ Quality Gate Failed: Error {score} is above threshold {threshold}')
+              exit(1)
+          else:
+              print('✅ Quality Gate Passed!')
+          "
 
       - name: Archive Model Artifact
-        uses: actions/upload-artifact@v4
+        if: success() # Only archive if the quality gate passed
+        uses: actions/upload-artifact@v3
         with:
           name: house-price-model
           path: models/house_model.joblib
