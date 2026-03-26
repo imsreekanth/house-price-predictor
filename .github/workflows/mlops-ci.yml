@@ -1,44 +1,48 @@
-name: ML Model Training CI
+name: MLOps Production Pipeline
 on: [push]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
-  train-and-validate:
+  train-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: |
-          pip install pandas scikit-learn joblib
+        run: pip install pandas scikit-learn joblib fastapi uvicorn
 
       - name: Train Model
         run: python3 train.py
 
-      - name: Check Model Quality (Quality Gate)
+      - name: Check Model Quality
         run: |
-          # We use a Python one-liner to compare the score against our threshold
-          # If the Error (MAE) is > 50,000, we exit with code 1 to fail the build
           python3 -c "
           with open('model_score.txt', 'r') as f:
               score = float(f.read())
-          threshold = 50000.0
-          print(f'Current Model Error: {score}')
-          if score > threshold:
-              print(f'❌ Quality Gate Failed: Error {score} is above threshold {threshold}')
+          if score > 50000:
               exit(1)
-          else:
-              print('✅ Quality Gate Passed!')
           "
 
-      - name: Archive Model Artifact
-        if: success() # Only archive if the quality gate passed
-        uses: actions/upload-artifact@v4
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          name: house-price-model
-          path: models/house_model.joblib
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # This tags the image with your github username/repo-name:latest
+          tags: ghcr.io/${{ github.repository_owner }}/house-price-predictor:latest
