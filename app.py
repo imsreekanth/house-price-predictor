@@ -4,16 +4,18 @@ import pandas as pd
 
 app = FastAPI()
 
-# Load the model once when the server starts
-model = joblib.load('models/house_model.joblib')
+# Load the "Latest" model
+model = joblib.load('models/house_model_latest.joblib')
 
-@app.get("/")
-def home():
-    return {"message": "House Price Prediction API is Running"}
+@app.get("/health")
+def health():
+    # In MLOps, a health check can also verify model version
+    return {"status": "healthy", "model_version": "latest"}
 
 @app.post("/predict")
 def predict(data: dict):
-    # Data expected: {"sqft": 2000, "bedrooms": 3}
+    # Log the incoming request (This is "Inference Logging")
+    print(f"Request received: {data}") 
     df = pd.DataFrame([data])
     prediction = model.predict(df)
     return {"predicted_price": float(prediction[0])}

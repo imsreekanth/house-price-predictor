@@ -42,3 +42,5 @@ def train_model(data_path='data/latest_market_data.csv', model_save_path='models
 
 if __name__ == "__main__":
     train_model()
+
+## Hey Hi hari
